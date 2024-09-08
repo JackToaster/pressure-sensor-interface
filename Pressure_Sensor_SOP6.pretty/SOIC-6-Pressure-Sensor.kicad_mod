@@ -1,0 +1,197 @@
+(footprint "SOIC-6-Pressure-Sensor"
+	(version 20240108)
+	(generator "pcbnew")
+	(generator_version "8.0")
+	(layer "F.Cu")
+	(property "Reference" "REF**"
+		(at -4.84 0 90)
+		(layer "F.SilkS")
+		(uuid "0c9c7eb6-d390-452b-8423-89ec6e849e4d")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "SOP-6"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(uuid "36d04195-6341-4431-825a-4ec8745f0921")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Footprint" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "4f67ee06-3373-49df-a6ee-5dd6b7fecaa1")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "e11e866e-a986-4cb1-840d-919999a994c1")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" "SOP-6 Pressure Transducer for LWP040-type sensors"
+		(at 0 7.5 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "f15d76ec-01da-4dbb-b889-de3e691a929b")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr smd)
+	(fp_line
+		(start -3.5 -1)
+		(end -2 -2.5)
+		(stroke
+			(width 0.12)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "83b900a7-5a1d-4e34-8403-9276b374fd7d")
+	)
+	(fp_line
+		(start -3.5 2.5)
+		(end -3.5 -1)
+		(stroke
+			(width 0.12)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "79a2ea02-d20f-4a3d-a1b8-c860e6c9e1c4")
+	)
+	(fp_line
+		(start -2 -2.5)
+		(end 3.5 -2.5)
+		(stroke
+			(width 0.12)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "1383f19a-f8c9-4e40-812e-8241f90d71f8")
+	)
+	(fp_line
+		(start 3.5 -2.5)
+		(end 3.5 2.5)
+		(stroke
+			(width 0.12)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "743bbaa2-e6a4-45d7-9847-6e3317b3e028")
+	)
+	(fp_line
+		(start 3.5 2.5)
+		(end -3.5 2.5)
+		(stroke
+			(width 0.12)
+			(type default)
+		)
+		(layer "F.SilkS")
+		(uuid "47f505b5-8c1e-4aa0-8e61-030fd8e5bff1")
+	)
+	(fp_line
+		(start -4.25 -6.2)
+		(end 4.25 -6.2)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "8b8bba2d-b11b-4b6a-8f19-f185fd2b5a8b")
+	)
+	(fp_line
+		(start -4.25 6.2)
+		(end -4.25 -6.2)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "414385ab-c043-43e1-9237-b356af405ae5")
+	)
+	(fp_line
+		(start 4.25 -6.2)
+		(end 4.25 6.2)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "c1e44ade-4491-4432-bb8f-ea0cfa065397")
+	)
+	(fp_line
+		(start 4.25 6.2)
+		(end -4.25 6.2)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "F.CrtYd")
+		(uuid "dc57ac02-e4c9-475a-9412-78e9e9b12f35")
+	)
+	(pad "1" smd rect
+		(at -2.54 -4.6)
+		(size 1.6 2.7)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+		(thermal_bridge_angle 45)
+		(uuid "76268592-17f8-4c8a-b4a5-b935d0cda0dd")
+	)
+	(pad "2" smd rect
+		(at 0 -4.6)
+		(size 1.6 2.7)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+		(thermal_bridge_angle 45)
+		(uuid "bf929307-7d02-45e8-a9a7-245640d1116d")
+	)
+	(pad "3" smd rect
+		(at 2.54 -4.6)
+		(size 1.6 2.7)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+		(thermal_bridge_angle 45)
+		(uuid "7112dcfd-6c4e-4d50-a40e-6369150ca808")
+	)
+	(pad "4" smd rect
+		(at 2.54 4.6)
+		(size 1.6 2.7)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+		(thermal_bridge_angle 45)
+		(uuid "2578fd2d-2296-4a0e-bd5b-60aced098744")
+	)
+	(pad "5" smd rect
+		(at 0 4.6)
+		(size 1.6 2.7)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+		(thermal_bridge_angle 45)
+		(uuid "ce3830f0-701e-4269-b76f-875b09c535d1")
+	)
+	(pad "6" smd rect
+		(at -2.54 4.6)
+		(size 1.6 2.7)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+		(thermal_bridge_angle 45)
+		(uuid "adee31ef-2b93-44ef-927c-53bda7710649")
+	)
+)

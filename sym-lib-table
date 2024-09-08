@@ -1,0 +1,5 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "Pressure_Sensor_SOP6")(type "KiCad")(uri "${KIPRJMOD}/Pressure_Sensor_SOP6.kicad_sym")(options "")(descr ""))
+  (lib (name "TB003-500-P02BE")(type "KiCad")(uri "${KIPRJMOD}/TB003-500-P02BE.kicad_sym")(options "")(descr ""))
+)
