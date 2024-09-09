@@ -1,86 +1,66 @@
-name: CI
+name: "kibot --quick-start"
 
 # Controls when the action will run. Triggers the workflow on push or pull request
 # events but only for the master branch
 on:
   push:
     paths:
-      - '*.sch'
+      - '*.kicad_sch'
       - '*.kicad_pcb'
-      - '.github/workflows/kibot.yml'
+      - '.github/workflows/kibot_quick_start.yml'
+  pull_request:
+    paths:
+      - '*.kicad_sch'
+      - '*.kicad_pcb'
+      - '.github/workflows/kibot_quick_start.yml'
+  repository_dispatch:
+    types: [run_qs]
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  ERC:
+  quick:
     runs-on: ubuntu-latest
-    container: setsoft/kicad_auto:latest
+    container: ghcr.io/inti-cmnb/kicad8_auto_full:latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
+      with:
+        # So we can run a diff between last 2 changes
+        fetch-depth: '0'
 
-    - name: Run ERC
+    - name: Quick Start
       run: |
-        [ -f *.sch ] && kiplot  -d Fabrication -s update_xml,run_drc -i
+        kibot --quick-start
 
     - name: Retrieve results
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v4
       with:
-        name: ERC_Output
-        path: Fabrication
+        name: Automatic_outputs
+        path: Generated
 
-  DRC:
+  # This step is to upload the results to another repo (web pages)
+  deploy:
     runs-on: ubuntu-latest
-    container: setsoft/kicad_auto:latest
-    needs: ERC
+    needs: quick
 
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Run DRC
-      run: |
-        [ -f *.kicad_pcb ] && kiplot  -d Fabrication -s update_xml,run_erc -i
+    - uses: actions/checkout@v4
 
     - name: Retrieve results
-      uses: actions/upload-artifact@v1
+      uses: actions/download-artifact@v4
       with:
-        name: DRC_Output
-        path: Fabrication
+        name: Automatic_outputs
+        path: Generated
 
-  FabSch:
-    name: Schematic fabrication files
-    runs-on: ubuntu-latest
-    container: setsoft/kicad_auto:latest
-    needs: ERC
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Run schematic stuff
+    - name: Disable Jekyll
+      # Jekyll will filter the KiRi folders
       run: |
-        [ -f *.sch ] && kiplot  -d Fabrication -s run_drc,run_erc print_sch
+        touch Generated/.nojekyll
 
-    - name: Retrieve results
-      uses: actions/upload-artifact@v1
+    - name: Deploy navigate results
+      uses: JamesIves/github-pages-deploy-action@v4
       with:
-        name: FabSch_Output
-        path: Fabrication
-
-  FabPCB:
-    name: PCB fabrication files
-    runs-on: ubuntu-latest
-    container: setsoft/kicad_auto:latest
-    needs: DRC
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Run PCB stuff
-      run: |
-        [ -f *.kicad_pcb ] && kiplot  -d Fabrication -s all print_front gerbers
-
-    - name: Retrieve results
-      uses: actions/upload-artifact@v1
-      with:
-        name: FabPCB_Output
-        path: Fabrication
-
-
+        branch: main
+        folder: Generated
+        repository-name: INTI-CMNB/kibot_variants_arduprog_site
+        token: ${{ secrets.TOKEN }}
