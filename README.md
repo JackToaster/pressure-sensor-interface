@@ -21,3 +21,4 @@ This repository contains PCB designs & firmware (WIP) for an 8-channel USB press
 - Individual PWM control of each channel
 
 **STM32F103 Microcontroller + USB-C**
+idk
