@@ -1,0 +1,4 @@
+crcmod==1.7
+hid==1.0.6
+pyserial==3.5
+setuptools==75.1.0
