@@ -1,0 +1,918 @@
+ARM GAS  /tmp/ccBsJCQg.s 			page 1
+
+
+   1              		.cpu cortex-m3
+   2              		.arch armv7-m
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"hx711.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.file 1 "Core/Src/hx711.c"
+  18              		.section	.text.sign_extend,"ax",%progbits
+  19              		.align	1
+  20              		.global	sign_extend
+  21              		.syntax unified
+  22              		.thumb
+  23              		.thumb_func
+  25              	sign_extend:
+  26              	.LVL0:
+  27              	.LFB68:
+   1:Core/Src/hx711.c **** #include "hx711.h"
+   2:Core/Src/hx711.c **** 
+   3:Core/Src/hx711.c **** uint8_t pulse_count;
+   4:Core/Src/hx711.c **** int32_t offsets[8];
+   5:Core/Src/hx711.c **** 
+   6:Core/Src/hx711.c **** const uint16_t dout_pins[8] = {
+   7:Core/Src/hx711.c ****     DOUT0_Pin, DOUT1_Pin, DOUT2_Pin, DOUT3_Pin, DOUT4_Pin, DOUT5_Pin, DOUT6_Pin, DOUT7_Pin
+   8:Core/Src/hx711.c **** };
+   9:Core/Src/hx711.c **** 
+  10:Core/Src/hx711.c **** int32_t counts[8];
+  11:Core/Src/hx711.c **** 
+  12:Core/Src/hx711.c **** 
+  13:Core/Src/hx711.c **** void hx711_initialize(uint8_t gain_pulses) {
+  14:Core/Src/hx711.c ****     pulse_count = gain_pulses;
+  15:Core/Src/hx711.c ****     // send out pulses to set the gain. We don't expect anything back here.
+  16:Core/Src/hx711.c ****     for(uint8_t i = 0; i < 8; ++i) {
+  17:Core/Src/hx711.c ****         offsets[i] = 0;
+  18:Core/Src/hx711.c ****     }
+  19:Core/Src/hx711.c ****     hx711_read();
+  20:Core/Src/hx711.c **** }
+  21:Core/Src/hx711.c **** 
+  22:Core/Src/hx711.c **** inline void pd_sck_high(void) {
+  23:Core/Src/hx711.c ****      HAL_GPIO_WritePin(PD_SCK_GPIO_Port, PD_SCK_Pin, GPIO_PIN_SET);
+  24:Core/Src/hx711.c **** }
+  25:Core/Src/hx711.c **** 
+  26:Core/Src/hx711.c **** inline void pd_sck_low(void) {
+  27:Core/Src/hx711.c ****      HAL_GPIO_WritePin(PD_SCK_GPIO_Port, PD_SCK_Pin, GPIO_PIN_RESET);
+  28:Core/Src/hx711.c **** }
+  29:Core/Src/hx711.c **** 
+  30:Core/Src/hx711.c **** 
+  31:Core/Src/hx711.c **** // turn a 24-bit signed value to a 32-bit signed value
+ARM GAS  /tmp/ccBsJCQg.s 			page 2
+
+
+  32:Core/Src/hx711.c **** int32_t sign_extend(int32_t val_24) {
+  28              		.loc 1 32 37 view -0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 0
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  32              		@ link register save eliminated.
+  33:Core/Src/hx711.c ****     if(val_24 & 0x800000) {
+  33              		.loc 1 33 5 view .LVU1
+  34              		.loc 1 33 7 is_stmt 0 view .LVU2
+  35 0000 10F4000F 		tst	r0, #8388608
+  36 0004 01D0     		beq	.L2
+  34:Core/Src/hx711.c ****         return val_24 | 0xFF000000;
+  37              		.loc 1 34 9 is_stmt 1 view .LVU3
+  38 0006 40F07F40 		orr	r0, r0, #-16777216
+  39              	.LVL1:
+  40              	.L2:
+  35:Core/Src/hx711.c ****     } else {
+  36:Core/Src/hx711.c ****         return val_24;
+  37:Core/Src/hx711.c ****     }
+  38:Core/Src/hx711.c **** }
+  41              		.loc 1 38 1 is_stmt 0 view .LVU4
+  42 000a 7047     		bx	lr
+  43              		.cfi_endproc
+  44              	.LFE68:
+  46              		.section	.text.wait_for_sensors,"ax",%progbits
+  47              		.align	1
+  48              		.global	wait_for_sensors
+  49              		.syntax unified
+  50              		.thumb
+  51              		.thumb_func
+  53              	wait_for_sensors:
+  54              	.LFB70:
+  39:Core/Src/hx711.c **** 
+  40:Core/Src/hx711.c **** void hx711_zero(void) {
+  41:Core/Src/hx711.c ****     int32_t average_values[8] = {0};
+  42:Core/Src/hx711.c **** 
+  43:Core/Src/hx711.c ****     for(uint32_t i = 0; i < ZERO_SAMPLES; ++i) {
+  44:Core/Src/hx711.c ****         hx711_read();
+  45:Core/Src/hx711.c ****         for(uint8_t c = 0; c < 8; ++c){
+  46:Core/Src/hx711.c ****             average_values[c] += counts[c];
+  47:Core/Src/hx711.c ****         }
+  48:Core/Src/hx711.c ****     }
+  49:Core/Src/hx711.c ****     for(uint8_t c = 0; c < 8; ++c){
+  50:Core/Src/hx711.c ****         offsets[c] -= (average_values[c] / ZERO_SAMPLES);
+  51:Core/Src/hx711.c ****     }
+  52:Core/Src/hx711.c **** }
+  53:Core/Src/hx711.c **** 
+  54:Core/Src/hx711.c **** void wait_for_sensors(void) {
+  55              		.loc 1 54 29 is_stmt 1 view -0
+  56              		.cfi_startproc
+  57              		@ args = 0, pretend = 0, frame = 0
+  58              		@ frame_needed = 0, uses_anonymous_args = 0
+  59 0000 08B5     		push	{r3, lr}
+  60              		.cfi_def_cfa_offset 8
+  61              		.cfi_offset 3, -8
+  62              		.cfi_offset 14, -4
+  63              	.L4:
+ARM GAS  /tmp/ccBsJCQg.s 			page 3
+
+
+  55:Core/Src/hx711.c **** 
+  56:Core/Src/hx711.c ****     // wait for DOUT to go low to read data
+  57:Core/Src/hx711.c ****     while (HAL_GPIO_ReadPin(DOUT0_GPIO_Port, DOUT0_Pin));
+  64              		.loc 1 57 12 discriminator 1 view .LVU6
+  65 0002 4FF48071 		mov	r1, #256
+  66 0006 0348     		ldr	r0, .L6
+  67 0008 FFF7FEFF 		bl	HAL_GPIO_ReadPin
+  68              	.LVL2:
+  69 000c 0028     		cmp	r0, #0
+  70 000e F8D1     		bne	.L4
+  58:Core/Src/hx711.c **** }
+  71              		.loc 1 58 1 is_stmt 0 view .LVU7
+  72 0010 08BD     		pop	{r3, pc}
+  73              	.L7:
+  74 0012 00BF     		.align	2
+  75              	.L6:
+  76 0014 000C0140 		.word	1073810432
+  77              		.cfi_endproc
+  78              	.LFE70:
+  80              		.section	.text.hx711_read,"ax",%progbits
+  81              		.align	1
+  82              		.global	hx711_read
+  83              		.syntax unified
+  84              		.thumb
+  85              		.thumb_func
+  87              	hx711_read:
+  88              	.LFB71:
+  59:Core/Src/hx711.c **** 
+  60:Core/Src/hx711.c **** void hx711_read(void) {
+  89              		.loc 1 60 23 is_stmt 1 view -0
+  90              		.cfi_startproc
+  91              		@ args = 0, pretend = 0, frame = 0
+  92              		@ frame_needed = 0, uses_anonymous_args = 0
+  93 0000 38B5     		push	{r3, r4, r5, lr}
+  94              		.cfi_def_cfa_offset 16
+  95              		.cfi_offset 3, -16
+  96              		.cfi_offset 4, -12
+  97              		.cfi_offset 5, -8
+  98              		.cfi_offset 14, -4
+  61:Core/Src/hx711.c ****     wait_for_sensors();
+  99              		.loc 1 61 5 view .LVU9
+ 100 0002 FFF7FEFF 		bl	wait_for_sensors
+ 101              	.LVL3:
+  62:Core/Src/hx711.c ****     // reset counts
+  63:Core/Src/hx711.c ****     for(uint8_t i = 0; i < 8; ++i) {
+ 102              		.loc 1 63 5 view .LVU10
+ 103              	.LBB16:
+ 104              		.loc 1 63 9 view .LVU11
+ 105              		.loc 1 63 17 is_stmt 0 view .LVU12
+ 106 0006 0023     		movs	r3, #0
+ 107              		.loc 1 63 5 view .LVU13
+ 108 0008 05E0     		b	.L9
+ 109              	.LVL4:
+ 110              	.L10:
+  64:Core/Src/hx711.c ****         counts[i] = 0;
+ 111              		.loc 1 64 9 is_stmt 1 view .LVU14
+ 112              		.loc 1 64 19 is_stmt 0 view .LVU15
+ARM GAS  /tmp/ccBsJCQg.s 			page 4
+
+
+ 113 000a 2F4A     		ldr	r2, .L22
+ 114 000c 0021     		movs	r1, #0
+ 115 000e 42F82310 		str	r1, [r2, r3, lsl #2]
+  63:Core/Src/hx711.c ****         counts[i] = 0;
+ 116              		.loc 1 63 31 is_stmt 1 discriminator 3 view .LVU16
+ 117 0012 0133     		adds	r3, r3, #1
+ 118              	.LVL5:
+  63:Core/Src/hx711.c ****         counts[i] = 0;
+ 119              		.loc 1 63 31 is_stmt 0 discriminator 3 view .LVU17
+ 120 0014 DBB2     		uxtb	r3, r3
+ 121              	.LVL6:
+ 122              	.L9:
+  63:Core/Src/hx711.c ****         counts[i] = 0;
+ 123              		.loc 1 63 26 is_stmt 1 discriminator 1 view .LVU18
+ 124 0016 072B     		cmp	r3, #7
+ 125 0018 F7D9     		bls	.L10
+ 126              	.LBE16:
+  65:Core/Src/hx711.c ****     }
+  66:Core/Src/hx711.c **** 
+  67:Core/Src/hx711.c ****     pd_sck_low();
+ 127              		.loc 1 67 5 view .LVU19
+ 128              	.LBB17:
+ 129              	.LBI17:
+  26:Core/Src/hx711.c ****      HAL_GPIO_WritePin(PD_SCK_GPIO_Port, PD_SCK_Pin, GPIO_PIN_RESET);
+ 130              		.loc 1 26 13 view .LVU20
+ 131              	.LBB18:
+  27:Core/Src/hx711.c **** }
+ 132              		.loc 1 27 6 view .LVU21
+ 133 001a 0022     		movs	r2, #0
+ 134 001c 4FF40071 		mov	r1, #512
+ 135 0020 2A48     		ldr	r0, .L22+4
+ 136 0022 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 137              	.LVL7:
+  27:Core/Src/hx711.c **** }
+ 138              		.loc 1 27 6 is_stmt 0 view .LVU22
+ 139              	.LBE18:
+ 140              	.LBE17:
+  68:Core/Src/hx711.c **** 
+  69:Core/Src/hx711.c ****     uint8_t i;
+ 141              		.loc 1 69 5 is_stmt 1 view .LVU23
+  70:Core/Src/hx711.c ****     for(i = 0; i < 24; ++i) {
+ 142              		.loc 1 70 5 view .LVU24
+ 143              		.loc 1 70 11 is_stmt 0 view .LVU25
+ 144 0026 0024     		movs	r4, #0
+ 145              		.loc 1 70 5 view .LVU26
+ 146 0028 15E0     		b	.L11
+ 147              	.LVL8:
+ 148              	.L13:
+ 149              	.LBB19:
+ 150              	.LBB20:
+  71:Core/Src/hx711.c ****         // clock sck
+  72:Core/Src/hx711.c ****         pd_sck_high();
+  73:Core/Src/hx711.c ****         pd_sck_low();
+  74:Core/Src/hx711.c **** 
+  75:Core/Src/hx711.c ****         // read data
+  76:Core/Src/hx711.c ****         uint32_t port_val = DOUT_GPIO_Port->IDR;
+  77:Core/Src/hx711.c ****         // process data
+ARM GAS  /tmp/ccBsJCQg.s 			page 5
+
+
+  78:Core/Src/hx711.c ****         for(uint8_t i = 0; i < 8; ++i) {
+ 151              		.loc 1 78 35 is_stmt 1 discriminator 2 view .LVU27
+ 152 002a 0133     		adds	r3, r3, #1
+ 153              	.LVL9:
+ 154              		.loc 1 78 35 is_stmt 0 discriminator 2 view .LVU28
+ 155 002c DBB2     		uxtb	r3, r3
+ 156              	.LVL10:
+ 157              	.L12:
+ 158              		.loc 1 78 30 is_stmt 1 discriminator 1 view .LVU29
+ 159 002e 072B     		cmp	r3, #7
+ 160 0030 0FD8     		bhi	.L21
+  79:Core/Src/hx711.c ****             counts[i] <<= 1;
+ 161              		.loc 1 79 13 view .LVU30
+ 162              		.loc 1 79 19 is_stmt 0 view .LVU31
+ 163 0032 2549     		ldr	r1, .L22
+ 164 0034 51F82320 		ldr	r2, [r1, r3, lsl #2]
+ 165              		.loc 1 79 23 view .LVU32
+ 166 0038 5200     		lsls	r2, r2, #1
+ 167 003a 41F82320 		str	r2, [r1, r3, lsl #2]
+  80:Core/Src/hx711.c ****             if(port_val & dout_pins[i]) {counts[i]++;}
+ 168              		.loc 1 80 13 is_stmt 1 view .LVU33
+ 169              		.loc 1 80 36 is_stmt 0 view .LVU34
+ 170 003e 2449     		ldr	r1, .L22+8
+ 171 0040 31F81310 		ldrh	r1, [r1, r3, lsl #1]
+ 172              		.loc 1 80 15 view .LVU35
+ 173 0044 0142     		tst	r1, r0
+ 174 0046 F0D0     		beq	.L13
+ 175              		.loc 1 80 42 is_stmt 1 discriminator 1 view .LVU36
+ 176              		.loc 1 80 51 is_stmt 0 discriminator 1 view .LVU37
+ 177 0048 0132     		adds	r2, r2, #1
+ 178 004a 1F49     		ldr	r1, .L22
+ 179 004c 41F82320 		str	r2, [r1, r3, lsl #2]
+ 180 0050 EBE7     		b	.L13
+ 181              	.L21:
+ 182              		.loc 1 80 51 discriminator 1 view .LVU38
+ 183              	.LBE20:
+ 184              	.LBE19:
+  70:Core/Src/hx711.c ****         // clock sck
+ 185              		.loc 1 70 24 is_stmt 1 discriminator 2 view .LVU39
+ 186 0052 0134     		adds	r4, r4, #1
+ 187              	.LVL11:
+  70:Core/Src/hx711.c ****         // clock sck
+ 188              		.loc 1 70 24 is_stmt 0 discriminator 2 view .LVU40
+ 189 0054 E4B2     		uxtb	r4, r4
+ 190              	.LVL12:
+ 191              	.L11:
+  70:Core/Src/hx711.c ****         // clock sck
+ 192              		.loc 1 70 18 is_stmt 1 discriminator 1 view .LVU41
+ 193 0056 172C     		cmp	r4, #23
+ 194 0058 1FD8     		bhi	.L16
+ 195              	.LBB26:
+  72:Core/Src/hx711.c ****         pd_sck_low();
+ 196              		.loc 1 72 9 view .LVU42
+ 197              	.LBB21:
+ 198              	.LBI21:
+  22:Core/Src/hx711.c ****      HAL_GPIO_WritePin(PD_SCK_GPIO_Port, PD_SCK_Pin, GPIO_PIN_SET);
+ 199              		.loc 1 22 13 view .LVU43
+ARM GAS  /tmp/ccBsJCQg.s 			page 6
+
+
+ 200              	.LBB22:
+  23:Core/Src/hx711.c **** }
+ 201              		.loc 1 23 6 view .LVU44
+ 202 005a 1C4D     		ldr	r5, .L22+4
+ 203 005c 0122     		movs	r2, #1
+ 204 005e 4FF40071 		mov	r1, #512
+ 205 0062 2846     		mov	r0, r5
+ 206 0064 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 207              	.LVL13:
+ 208              	.LBE22:
+ 209              	.LBE21:
+  73:Core/Src/hx711.c **** 
+ 210              		.loc 1 73 9 view .LVU45
+ 211              	.LBB23:
+ 212              	.LBI23:
+  26:Core/Src/hx711.c ****      HAL_GPIO_WritePin(PD_SCK_GPIO_Port, PD_SCK_Pin, GPIO_PIN_RESET);
+ 213              		.loc 1 26 13 view .LVU46
+ 214              	.LBB24:
+  27:Core/Src/hx711.c **** }
+ 215              		.loc 1 27 6 view .LVU47
+ 216 0068 0022     		movs	r2, #0
+ 217 006a 4FF40071 		mov	r1, #512
+ 218 006e 2846     		mov	r0, r5
+ 219 0070 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 220              	.LVL14:
+ 221              	.LBE24:
+ 222              	.LBE23:
+  76:Core/Src/hx711.c ****         // process data
+ 223              		.loc 1 76 9 view .LVU48
+  76:Core/Src/hx711.c ****         // process data
+ 224              		.loc 1 76 18 is_stmt 0 view .LVU49
+ 225 0074 174B     		ldr	r3, .L22+12
+ 226 0076 9868     		ldr	r0, [r3, #8]
+ 227              	.LVL15:
+  78:Core/Src/hx711.c ****             counts[i] <<= 1;
+ 228              		.loc 1 78 9 is_stmt 1 view .LVU50
+ 229              	.LBB25:
+  78:Core/Src/hx711.c ****             counts[i] <<= 1;
+ 230              		.loc 1 78 13 view .LVU51
+  78:Core/Src/hx711.c ****             counts[i] <<= 1;
+ 231              		.loc 1 78 21 is_stmt 0 view .LVU52
+ 232 0078 0023     		movs	r3, #0
+  78:Core/Src/hx711.c ****             counts[i] <<= 1;
+ 233              		.loc 1 78 9 view .LVU53
+ 234 007a D8E7     		b	.L12
+ 235              	.LVL16:
+ 236              	.L17:
+  78:Core/Src/hx711.c ****             counts[i] <<= 1;
+ 237              		.loc 1 78 9 view .LVU54
+ 238              	.LBE25:
+ 239              	.LBE26:
+  81:Core/Src/hx711.c ****         }
+  82:Core/Src/hx711.c ****     }
+  83:Core/Src/hx711.c ****     for(; i < pulse_count; ++i) {
+  84:Core/Src/hx711.c ****         pd_sck_high();
+ 240              		.loc 1 84 9 is_stmt 1 view .LVU55
+ 241              	.LBB27:
+ARM GAS  /tmp/ccBsJCQg.s 			page 7
+
+
+ 242              	.LBI27:
+  22:Core/Src/hx711.c ****      HAL_GPIO_WritePin(PD_SCK_GPIO_Port, PD_SCK_Pin, GPIO_PIN_SET);
+ 243              		.loc 1 22 13 view .LVU56
+ 244              	.LBB28:
+  23:Core/Src/hx711.c **** }
+ 245              		.loc 1 23 6 view .LVU57
+ 246 007c 134D     		ldr	r5, .L22+4
+ 247 007e 0122     		movs	r2, #1
+ 248 0080 4FF40071 		mov	r1, #512
+ 249 0084 2846     		mov	r0, r5
+ 250 0086 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 251              	.LVL17:
+ 252              	.LBE28:
+ 253              	.LBE27:
+  85:Core/Src/hx711.c ****         pd_sck_low();
+ 254              		.loc 1 85 9 view .LVU58
+ 255              	.LBB29:
+ 256              	.LBI29:
+  26:Core/Src/hx711.c ****      HAL_GPIO_WritePin(PD_SCK_GPIO_Port, PD_SCK_Pin, GPIO_PIN_RESET);
+ 257              		.loc 1 26 13 view .LVU59
+ 258              	.LBB30:
+  27:Core/Src/hx711.c **** }
+ 259              		.loc 1 27 6 view .LVU60
+ 260 008a 0022     		movs	r2, #0
+ 261 008c 4FF40071 		mov	r1, #512
+ 262 0090 2846     		mov	r0, r5
+ 263 0092 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 264              	.LVL18:
+ 265              	.LBE30:
+ 266              	.LBE29:
+  83:Core/Src/hx711.c ****         pd_sck_high();
+ 267              		.loc 1 83 28 discriminator 2 view .LVU61
+ 268 0096 0134     		adds	r4, r4, #1
+ 269              	.LVL19:
+  83:Core/Src/hx711.c ****         pd_sck_high();
+ 270              		.loc 1 83 28 is_stmt 0 discriminator 2 view .LVU62
+ 271 0098 E4B2     		uxtb	r4, r4
+ 272              	.LVL20:
+ 273              	.L16:
+  83:Core/Src/hx711.c ****         pd_sck_high();
+ 274              		.loc 1 83 13 is_stmt 1 discriminator 1 view .LVU63
+ 275 009a 0F4B     		ldr	r3, .L22+16
+ 276 009c 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 277 009e A342     		cmp	r3, r4
+ 278 00a0 ECD8     		bhi	.L17
+ 279              	.LBB31:
+  86:Core/Src/hx711.c ****     }
+  87:Core/Src/hx711.c **** 
+  88:Core/Src/hx711.c ****     for(uint8_t i = 0; i < 8; ++i) {
+ 280              		.loc 1 88 17 is_stmt 0 view .LVU64
+ 281 00a2 0024     		movs	r4, #0
+ 282              	.LVL21:
+ 283              		.loc 1 88 17 view .LVU65
+ 284 00a4 0CE0     		b	.L18
+ 285              	.LVL22:
+ 286              	.L19:
+  89:Core/Src/hx711.c ****         counts[i] = sign_extend(counts[i]) + offsets[i];
+ARM GAS  /tmp/ccBsJCQg.s 			page 8
+
+
+ 287              		.loc 1 89 9 is_stmt 1 view .LVU66
+ 288              		.loc 1 89 21 is_stmt 0 view .LVU67
+ 289 00a6 084D     		ldr	r5, .L22
+ 290 00a8 55F82400 		ldr	r0, [r5, r4, lsl #2]
+ 291 00ac FFF7FEFF 		bl	sign_extend
+ 292              	.LVL23:
+ 293              		.loc 1 89 53 discriminator 1 view .LVU68
+ 294 00b0 0A4B     		ldr	r3, .L22+20
+ 295 00b2 53F82430 		ldr	r3, [r3, r4, lsl #2]
+ 296              		.loc 1 89 44 discriminator 1 view .LVU69
+ 297 00b6 1844     		add	r0, r0, r3
+ 298              		.loc 1 89 19 discriminator 1 view .LVU70
+ 299 00b8 45F82400 		str	r0, [r5, r4, lsl #2]
+  88:Core/Src/hx711.c ****         counts[i] = sign_extend(counts[i]) + offsets[i];
+ 300              		.loc 1 88 31 is_stmt 1 discriminator 3 view .LVU71
+ 301 00bc 0134     		adds	r4, r4, #1
+ 302              	.LVL24:
+  88:Core/Src/hx711.c ****         counts[i] = sign_extend(counts[i]) + offsets[i];
+ 303              		.loc 1 88 31 is_stmt 0 discriminator 3 view .LVU72
+ 304 00be E4B2     		uxtb	r4, r4
+ 305              	.LVL25:
+ 306              	.L18:
+  88:Core/Src/hx711.c ****         counts[i] = sign_extend(counts[i]) + offsets[i];
+ 307              		.loc 1 88 26 is_stmt 1 discriminator 1 view .LVU73
+ 308 00c0 072C     		cmp	r4, #7
+ 309 00c2 F0D9     		bls	.L19
+ 310              	.LBE31:
+  90:Core/Src/hx711.c ****     }
+  91:Core/Src/hx711.c **** }
+ 311              		.loc 1 91 1 is_stmt 0 view .LVU74
+ 312 00c4 38BD     		pop	{r3, r4, r5, pc}
+ 313              	.LVL26:
+ 314              	.L23:
+ 315              		.loc 1 91 1 view .LVU75
+ 316 00c6 00BF     		.align	2
+ 317              	.L22:
+ 318 00c8 00000000 		.word	counts
+ 319 00cc 00080140 		.word	1073809408
+ 320 00d0 00000000 		.word	dout_pins
+ 321 00d4 000C0140 		.word	1073810432
+ 322 00d8 00000000 		.word	pulse_count
+ 323 00dc 00000000 		.word	offsets
+ 324              		.cfi_endproc
+ 325              	.LFE71:
+ 327              		.section	.text.hx711_initialize,"ax",%progbits
+ 328              		.align	1
+ 329              		.global	hx711_initialize
+ 330              		.syntax unified
+ 331              		.thumb
+ 332              		.thumb_func
+ 334              	hx711_initialize:
+ 335              	.LVL27:
+ 336              	.LFB65:
+  13:Core/Src/hx711.c ****     pulse_count = gain_pulses;
+ 337              		.loc 1 13 44 is_stmt 1 view -0
+ 338              		.cfi_startproc
+ 339              		@ args = 0, pretend = 0, frame = 0
+ARM GAS  /tmp/ccBsJCQg.s 			page 9
+
+
+ 340              		@ frame_needed = 0, uses_anonymous_args = 0
+  13:Core/Src/hx711.c ****     pulse_count = gain_pulses;
+ 341              		.loc 1 13 44 is_stmt 0 view .LVU77
+ 342 0000 08B5     		push	{r3, lr}
+ 343              		.cfi_def_cfa_offset 8
+ 344              		.cfi_offset 3, -8
+ 345              		.cfi_offset 14, -4
+  14:Core/Src/hx711.c ****     // send out pulses to set the gain. We don't expect anything back here.
+ 346              		.loc 1 14 5 is_stmt 1 view .LVU78
+  14:Core/Src/hx711.c ****     // send out pulses to set the gain. We don't expect anything back here.
+ 347              		.loc 1 14 17 is_stmt 0 view .LVU79
+ 348 0002 074B     		ldr	r3, .L28
+ 349 0004 1870     		strb	r0, [r3]
+  16:Core/Src/hx711.c ****         offsets[i] = 0;
+ 350              		.loc 1 16 5 is_stmt 1 view .LVU80
+ 351              	.LBB32:
+  16:Core/Src/hx711.c ****         offsets[i] = 0;
+ 352              		.loc 1 16 9 view .LVU81
+ 353              	.LVL28:
+  16:Core/Src/hx711.c ****         offsets[i] = 0;
+ 354              		.loc 1 16 17 is_stmt 0 view .LVU82
+ 355 0006 0023     		movs	r3, #0
+  16:Core/Src/hx711.c ****         offsets[i] = 0;
+ 356              		.loc 1 16 5 view .LVU83
+ 357 0008 05E0     		b	.L25
+ 358              	.LVL29:
+ 359              	.L26:
+  17:Core/Src/hx711.c ****     }
+ 360              		.loc 1 17 9 is_stmt 1 view .LVU84
+  17:Core/Src/hx711.c ****     }
+ 361              		.loc 1 17 20 is_stmt 0 view .LVU85
+ 362 000a 064A     		ldr	r2, .L28+4
+ 363 000c 0021     		movs	r1, #0
+ 364 000e 42F82310 		str	r1, [r2, r3, lsl #2]
+  16:Core/Src/hx711.c ****         offsets[i] = 0;
+ 365              		.loc 1 16 31 is_stmt 1 discriminator 3 view .LVU86
+ 366 0012 0133     		adds	r3, r3, #1
+ 367              	.LVL30:
+  16:Core/Src/hx711.c ****         offsets[i] = 0;
+ 368              		.loc 1 16 31 is_stmt 0 discriminator 3 view .LVU87
+ 369 0014 DBB2     		uxtb	r3, r3
+ 370              	.LVL31:
+ 371              	.L25:
+  16:Core/Src/hx711.c ****         offsets[i] = 0;
+ 372              		.loc 1 16 26 is_stmt 1 discriminator 1 view .LVU88
+ 373 0016 072B     		cmp	r3, #7
+ 374 0018 F7D9     		bls	.L26
+ 375              	.LBE32:
+  19:Core/Src/hx711.c **** }
+ 376              		.loc 1 19 5 view .LVU89
+ 377 001a FFF7FEFF 		bl	hx711_read
+ 378              	.LVL32:
+  20:Core/Src/hx711.c **** 
+ 379              		.loc 1 20 1 is_stmt 0 view .LVU90
+ 380 001e 08BD     		pop	{r3, pc}
+ 381              	.L29:
+ 382              		.align	2
+ARM GAS  /tmp/ccBsJCQg.s 			page 10
+
+
+ 383              	.L28:
+ 384 0020 00000000 		.word	pulse_count
+ 385 0024 00000000 		.word	offsets
+ 386              		.cfi_endproc
+ 387              	.LFE65:
+ 389              		.section	.text.hx711_zero,"ax",%progbits
+ 390              		.align	1
+ 391              		.global	hx711_zero
+ 392              		.syntax unified
+ 393              		.thumb
+ 394              		.thumb_func
+ 396              	hx711_zero:
+ 397              	.LFB69:
+  40:Core/Src/hx711.c ****     int32_t average_values[8] = {0};
+ 398              		.loc 1 40 23 is_stmt 1 view -0
+ 399              		.cfi_startproc
+ 400              		@ args = 0, pretend = 0, frame = 32
+ 401              		@ frame_needed = 0, uses_anonymous_args = 0
+ 402 0000 10B5     		push	{r4, lr}
+ 403              		.cfi_def_cfa_offset 8
+ 404              		.cfi_offset 4, -8
+ 405              		.cfi_offset 14, -4
+ 406 0002 88B0     		sub	sp, sp, #32
+ 407              		.cfi_def_cfa_offset 40
+  41:Core/Src/hx711.c **** 
+ 408              		.loc 1 41 5 view .LVU92
+  41:Core/Src/hx711.c **** 
+ 409              		.loc 1 41 13 is_stmt 0 view .LVU93
+ 410 0004 2022     		movs	r2, #32
+ 411 0006 0021     		movs	r1, #0
+ 412 0008 6846     		mov	r0, sp
+ 413 000a FFF7FEFF 		bl	memset
+ 414              	.LVL33:
+  43:Core/Src/hx711.c ****         hx711_read();
+ 415              		.loc 1 43 5 is_stmt 1 view .LVU94
+ 416              	.LBB33:
+  43:Core/Src/hx711.c ****         hx711_read();
+ 417              		.loc 1 43 9 view .LVU95
+  43:Core/Src/hx711.c ****         hx711_read();
+ 418              		.loc 1 43 18 is_stmt 0 view .LVU96
+ 419 000e 0024     		movs	r4, #0
+  43:Core/Src/hx711.c ****         hx711_read();
+ 420              		.loc 1 43 5 view .LVU97
+ 421 0010 0FE0     		b	.L31
+ 422              	.LVL34:
+ 423              	.L33:
+ 424              	.LBB34:
+  46:Core/Src/hx711.c ****         }
+ 425              		.loc 1 46 13 is_stmt 1 view .LVU98
+  46:Core/Src/hx711.c ****         }
+ 426              		.loc 1 46 27 is_stmt 0 view .LVU99
+ 427 0012 08AA     		add	r2, sp, #32
+ 428 0014 02EB8301 		add	r1, r2, r3, lsl #2
+ 429 0018 51F8202C 		ldr	r2, [r1, #-32]
+  46:Core/Src/hx711.c ****         }
+ 430              		.loc 1 46 40 view .LVU100
+ 431 001c 1548     		ldr	r0, .L41
+ARM GAS  /tmp/ccBsJCQg.s 			page 11
+
+
+ 432 001e 50F82300 		ldr	r0, [r0, r3, lsl #2]
+  46:Core/Src/hx711.c ****         }
+ 433              		.loc 1 46 31 view .LVU101
+ 434 0022 0244     		add	r2, r2, r0
+ 435 0024 41F8202C 		str	r2, [r1, #-32]
+  45:Core/Src/hx711.c ****             average_values[c] += counts[c];
+ 436              		.loc 1 45 35 is_stmt 1 discriminator 3 view .LVU102
+ 437 0028 0133     		adds	r3, r3, #1
+ 438              	.LVL35:
+  45:Core/Src/hx711.c ****             average_values[c] += counts[c];
+ 439              		.loc 1 45 35 is_stmt 0 discriminator 3 view .LVU103
+ 440 002a DBB2     		uxtb	r3, r3
+ 441              	.LVL36:
+ 442              	.L32:
+  45:Core/Src/hx711.c ****             average_values[c] += counts[c];
+ 443              		.loc 1 45 30 is_stmt 1 discriminator 1 view .LVU104
+ 444 002c 072B     		cmp	r3, #7
+ 445 002e F0D9     		bls	.L33
+ 446              	.LBE34:
+  43:Core/Src/hx711.c ****         hx711_read();
+ 447              		.loc 1 43 43 discriminator 2 view .LVU105
+ 448 0030 0134     		adds	r4, r4, #1
+ 449              	.LVL37:
+ 450              	.L31:
+  43:Core/Src/hx711.c ****         hx711_read();
+ 451              		.loc 1 43 27 discriminator 1 view .LVU106
+ 452 0032 3F2C     		cmp	r4, #63
+ 453 0034 03D8     		bhi	.L39
+  44:Core/Src/hx711.c ****         for(uint8_t c = 0; c < 8; ++c){
+ 454              		.loc 1 44 9 view .LVU107
+ 455 0036 FFF7FEFF 		bl	hx711_read
+ 456              	.LVL38:
+  45:Core/Src/hx711.c ****             average_values[c] += counts[c];
+ 457              		.loc 1 45 9 view .LVU108
+ 458              	.LBB35:
+  45:Core/Src/hx711.c ****             average_values[c] += counts[c];
+ 459              		.loc 1 45 13 view .LVU109
+  45:Core/Src/hx711.c ****             average_values[c] += counts[c];
+ 460              		.loc 1 45 21 is_stmt 0 view .LVU110
+ 461 003a 0023     		movs	r3, #0
+  45:Core/Src/hx711.c ****             average_values[c] += counts[c];
+ 462              		.loc 1 45 9 view .LVU111
+ 463 003c F6E7     		b	.L32
+ 464              	.LVL39:
+ 465              	.L39:
+  45:Core/Src/hx711.c ****             average_values[c] += counts[c];
+ 466              		.loc 1 45 9 view .LVU112
+ 467              	.LBE35:
+ 468              	.LBE33:
+ 469              	.LBB36:
+  49:Core/Src/hx711.c ****         offsets[c] -= (average_values[c] / ZERO_SAMPLES);
+ 470              		.loc 1 49 17 view .LVU113
+ 471 003e 0023     		movs	r3, #0
+ 472 0040 06E0     		b	.L35
+ 473              	.LVL40:
+ 474              	.L36:
+  50:Core/Src/hx711.c ****     }
+ARM GAS  /tmp/ccBsJCQg.s 			page 12
+
+
+ 475              		.loc 1 50 20 view .LVU114
+ 476 0042 A2EBA112 		sub	r2, r2, r1, asr #6
+ 477 0046 0C49     		ldr	r1, .L41+4
+ 478 0048 41F82020 		str	r2, [r1, r0, lsl #2]
+  49:Core/Src/hx711.c ****         offsets[c] -= (average_values[c] / ZERO_SAMPLES);
+ 479              		.loc 1 49 31 is_stmt 1 discriminator 3 view .LVU115
+ 480 004c 0133     		adds	r3, r3, #1
+ 481              	.LVL41:
+  49:Core/Src/hx711.c ****         offsets[c] -= (average_values[c] / ZERO_SAMPLES);
+ 482              		.loc 1 49 31 is_stmt 0 discriminator 3 view .LVU116
+ 483 004e DBB2     		uxtb	r3, r3
+ 484              	.LVL42:
+ 485              	.L35:
+  49:Core/Src/hx711.c ****         offsets[c] -= (average_values[c] / ZERO_SAMPLES);
+ 486              		.loc 1 49 26 is_stmt 1 discriminator 1 view .LVU117
+ 487 0050 072B     		cmp	r3, #7
+ 488 0052 0CD8     		bhi	.L40
+  50:Core/Src/hx711.c ****     }
+ 489              		.loc 1 50 9 view .LVU118
+  50:Core/Src/hx711.c ****     }
+ 490              		.loc 1 50 20 is_stmt 0 view .LVU119
+ 491 0054 1846     		mov	r0, r3
+  50:Core/Src/hx711.c ****     }
+ 492              		.loc 1 50 16 view .LVU120
+ 493 0056 084A     		ldr	r2, .L41+4
+ 494 0058 52F82320 		ldr	r2, [r2, r3, lsl #2]
+  50:Core/Src/hx711.c ****     }
+ 495              		.loc 1 50 38 view .LVU121
+ 496 005c 08A9     		add	r1, sp, #32
+ 497 005e 01EB8301 		add	r1, r1, r3, lsl #2
+ 498 0062 51F8201C 		ldr	r1, [r1, #-32]
+  50:Core/Src/hx711.c ****     }
+ 499              		.loc 1 50 42 view .LVU122
+ 500 0066 0029     		cmp	r1, #0
+ 501 0068 EBDA     		bge	.L36
+ 502 006a 3F31     		adds	r1, r1, #63
+ 503 006c E9E7     		b	.L36
+ 504              	.L40:
+ 505              	.LBE36:
+  52:Core/Src/hx711.c **** 
+ 506              		.loc 1 52 1 view .LVU123
+ 507 006e 08B0     		add	sp, sp, #32
+ 508              		.cfi_def_cfa_offset 8
+ 509              		@ sp needed
+ 510 0070 10BD     		pop	{r4, pc}
+ 511              	.LVL43:
+ 512              	.L42:
+  52:Core/Src/hx711.c **** 
+ 513              		.loc 1 52 1 view .LVU124
+ 514 0072 00BF     		.align	2
+ 515              	.L41:
+ 516 0074 00000000 		.word	counts
+ 517 0078 00000000 		.word	offsets
+ 518              		.cfi_endproc
+ 519              	.LFE69:
+ 521              		.section	.text.hx711_get_kpa,"ax",%progbits
+ 522              		.align	1
+ARM GAS  /tmp/ccBsJCQg.s 			page 13
+
+
+ 523              		.global	hx711_get_kpa
+ 524              		.syntax unified
+ 525              		.thumb
+ 526              		.thumb_func
+ 528              	hx711_get_kpa:
+ 529              	.LVL44:
+ 530              	.LFB72:
+  92:Core/Src/hx711.c **** 
+  93:Core/Src/hx711.c **** 
+  94:Core/Src/hx711.c **** float hx711_get_kpa(uint8_t channel) { 
+ 531              		.loc 1 94 38 is_stmt 1 view -0
+ 532              		.cfi_startproc
+ 533              		@ args = 0, pretend = 0, frame = 0
+ 534              		@ frame_needed = 0, uses_anonymous_args = 0
+ 535              		.loc 1 94 38 is_stmt 0 view .LVU126
+ 536 0000 10B5     		push	{r4, lr}
+ 537              		.cfi_def_cfa_offset 8
+ 538              		.cfi_offset 4, -8
+ 539              		.cfi_offset 14, -4
+  95:Core/Src/hx711.c ****     // full scale range is +/-80mV at AVDD=5V. Since we're running on 4.299V this gets scaled down.
+  96:Core/Src/hx711.c ****     float full_scale_input_voltage;
+ 540              		.loc 1 96 5 is_stmt 1 view .LVU127
+  97:Core/Src/hx711.c ****     if      (pulse_count == GAIN_32_PULSES ) { full_scale_input_voltage = (4.299/5.0) * 0.080; }
+ 541              		.loc 1 97 5 view .LVU128
+ 542              		.loc 1 97 26 is_stmt 0 view .LVU129
+ 543 0002 154B     		ldr	r3, .L49+8
+ 544 0004 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 545              		.loc 1 97 13 view .LVU130
+ 546 0006 1A2B     		cmp	r3, #26
+ 547 0008 1ED0     		beq	.L45
+  98:Core/Src/hx711.c ****     else if (pulse_count == GAIN_64_PULSES ) { full_scale_input_voltage = (4.299/5.0) * 0.040; }
+ 548              		.loc 1 98 10 is_stmt 1 view .LVU131
+ 549              		.loc 1 98 13 is_stmt 0 view .LVU132
+ 550 000a 1B2B     		cmp	r3, #27
+ 551 000c 1AD0     		beq	.L48
+  99:Core/Src/hx711.c ****     else   /*pulse_count == GAIN_128_PULSES*/{ full_scale_input_voltage = (4.299/5.0) * 0.020; }
+ 552              		.loc 1 99 73 view .LVU133
+ 553 000e 134C     		ldr	r4, .L49+12
+ 554              	.L44:
+ 555              	.LVL45:
+ 100:Core/Src/hx711.c ****     
+ 101:Core/Src/hx711.c **** 
+ 102:Core/Src/hx711.c ****     float max_hx711_val = 0x800000;
+ 556              		.loc 1 102 5 is_stmt 1 view .LVU134
+ 103:Core/Src/hx711.c **** 
+ 104:Core/Src/hx711.c ****     float input_voltage = counts[channel] / max_hx711_val * full_scale_input_voltage;
+ 557              		.loc 1 104 5 view .LVU135
+ 558              		.loc 1 104 43 is_stmt 0 view .LVU136
+ 559 0010 134B     		ldr	r3, .L49+16
+ 560 0012 53F82000 		ldr	r0, [r3, r0, lsl #2]
+ 561              	.LVL46:
+ 562              		.loc 1 104 43 view .LVU137
+ 563 0016 FFF7FEFF 		bl	__aeabi_i2f
+ 564              	.LVL47:
+ 565 001a 4FF05051 		mov	r1, #872415232
+ 566 001e FFF7FEFF 		bl	__aeabi_fmul
+ 567              	.LVL48:
+ARM GAS  /tmp/ccBsJCQg.s 			page 14
+
+
+ 568              		.loc 1 104 11 view .LVU138
+ 569 0022 2146     		mov	r1, r4
+ 570 0024 FFF7FEFF 		bl	__aeabi_fmul
+ 571              	.LVL49:
+ 105:Core/Src/hx711.c **** 
+ 106:Core/Src/hx711.c ****     return input_voltage * 100.0 / 0.070; // 100kPa full scale range is ~70mV
+ 572              		.loc 1 106 5 is_stmt 1 view .LVU139
+ 573              		.loc 1 106 26 is_stmt 0 view .LVU140
+ 574 0028 FFF7FEFF 		bl	__aeabi_f2d
+ 575              	.LVL50:
+ 576              		.loc 1 106 26 view .LVU141
+ 577 002c 0022     		movs	r2, #0
+ 578 002e 0D4B     		ldr	r3, .L49+20
+ 579 0030 FFF7FEFF 		bl	__aeabi_dmul
+ 580              	.LVL51:
+ 581              		.loc 1 106 34 view .LVU142
+ 582 0034 06A3     		adr	r3, .L49
+ 583 0036 D3E90023 		ldrd	r2, [r3]
+ 584 003a FFF7FEFF 		bl	__aeabi_ddiv
+ 585              	.LVL52:
+ 586 003e FFF7FEFF 		bl	__aeabi_d2f
+ 587              	.LVL53:
+ 107:Core/Src/hx711.c ****     // (really it's a range from 50-110, needs some calibration)
+ 108:Core/Src/hx711.c **** }...
+ 588              		.loc 1 108 1 view .LVU143
+ 589 0042 10BD     		pop	{r4, pc}
+ 590              	.LVL54:
+ 591              	.L48:
+  98:Core/Src/hx711.c ****     else if (pulse_count == GAIN_64_PULSES ) { full_scale_input_voltage = (4.299/5.0) * 0.040; }
+ 592              		.loc 1 98 73 discriminator 1 view .LVU144
+ 593 0044 084C     		ldr	r4, .L49+24
+ 594 0046 E3E7     		b	.L44
+ 595              	.L45:
+  97:Core/Src/hx711.c ****     if      (pulse_count == GAIN_32_PULSES ) { full_scale_input_voltage = (4.299/5.0) * 0.080; }
+ 596              		.loc 1 97 73 discriminator 1 view .LVU145
+ 597 0048 084C     		ldr	r4, .L49+28
+ 598 004a E1E7     		b	.L44
+ 599              	.L50:
+ 600 004c AFF30080 		.align	3
+ 601              	.L49:
+ 602 0050 EC51B81E 		.word	515396076
+ 603 0054 85EBB13F 		.word	1068624773
+ 604 0058 00000000 		.word	pulse_count
+ 605 005c A0DE8C3C 		.word	1015864992
+ 606 0060 00000000 		.word	counts
+ 607 0064 00005940 		.word	1079574528
+ 608 0068 A0DE0C3D 		.word	1024253600
+ 609 006c A0DE8C3D 		.word	1032642208
+ 610              		.cfi_endproc
+ 611              	.LFE72:
+ 613              		.global	counts
+ 614              		.section	.bss.counts,"aw",%nobits
+ 615              		.align	2
+ 618              	counts:
+ 619 0000 00000000 		.space	32
+ 619      00000000 
+ 619      00000000 
+ARM GAS  /tmp/ccBsJCQg.s 			page 15
+
+
+ 619      00000000 
+ 619      00000000 
+ 620              		.global	dout_pins
+ 621              		.section	.rodata.dout_pins,"a"
+ 622              		.align	2
+ 625              	dout_pins:
+ 626 0000 0001     		.short	256
+ 627 0002 0002     		.short	512
+ 628 0004 0004     		.short	1024
+ 629 0006 0008     		.short	2048
+ 630 0008 0010     		.short	4096
+ 631 000a 0020     		.short	8192
+ 632 000c 0040     		.short	16384
+ 633 000e 0080     		.short	-32768
+ 634              		.global	offsets
+ 635              		.section	.bss.offsets,"aw",%nobits
+ 636              		.align	2
+ 639              	offsets:
+ 640 0000 00000000 		.space	32
+ 640      00000000 
+ 640      00000000 
+ 640      00000000 
+ 640      00000000 
+ 641              		.global	pulse_count
+ 642              		.section	.bss.pulse_count,"aw",%nobits
+ 645              	pulse_count:
+ 646 0000 00       		.space	1
+ 647              		.text
+ 648              	.Letext0:
+ 649              		.file 2 "/usr/arm-none-eabi/include/machine/_default_types.h"
+ 650              		.file 3 "/usr/arm-none-eabi/include/sys/_stdint.h"
+ 651              		.file 4 "Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f103xb.h"
+ 652              		.file 5 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_gpio.h"
+ 653              		.file 6 "<built-in>"
+ARM GAS  /tmp/ccBsJCQg.s 			page 16
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 hx711.c
+     /tmp/ccBsJCQg.s:19     .text.sign_extend:00000000 $t
+     /tmp/ccBsJCQg.s:25     .text.sign_extend:00000000 sign_extend
+     /tmp/ccBsJCQg.s:47     .text.wait_for_sensors:00000000 $t
+     /tmp/ccBsJCQg.s:53     .text.wait_for_sensors:00000000 wait_for_sensors
+     /tmp/ccBsJCQg.s:76     .text.wait_for_sensors:00000014 $d
+     /tmp/ccBsJCQg.s:81     .text.hx711_read:00000000 $t
+     /tmp/ccBsJCQg.s:87     .text.hx711_read:00000000 hx711_read
+     /tmp/ccBsJCQg.s:318    .text.hx711_read:000000c8 $d
+     /tmp/ccBsJCQg.s:618    .bss.counts:00000000 counts
+     /tmp/ccBsJCQg.s:625    .rodata.dout_pins:00000000 dout_pins
+     /tmp/ccBsJCQg.s:645    .bss.pulse_count:00000000 pulse_count
+     /tmp/ccBsJCQg.s:639    .bss.offsets:00000000 offsets
+     /tmp/ccBsJCQg.s:328    .text.hx711_initialize:00000000 $t
+     /tmp/ccBsJCQg.s:334    .text.hx711_initialize:00000000 hx711_initialize
+     /tmp/ccBsJCQg.s:384    .text.hx711_initialize:00000020 $d
+     /tmp/ccBsJCQg.s:390    .text.hx711_zero:00000000 $t
+     /tmp/ccBsJCQg.s:396    .text.hx711_zero:00000000 hx711_zero
+     /tmp/ccBsJCQg.s:516    .text.hx711_zero:00000074 $d
+     /tmp/ccBsJCQg.s:522    .text.hx711_get_kpa:00000000 $t
+     /tmp/ccBsJCQg.s:528    .text.hx711_get_kpa:00000000 hx711_get_kpa
+     /tmp/ccBsJCQg.s:602    .text.hx711_get_kpa:00000050 $d
+     /tmp/ccBsJCQg.s:615    .bss.counts:00000000 $d
+     /tmp/ccBsJCQg.s:622    .rodata.dout_pins:00000000 $d
+     /tmp/ccBsJCQg.s:636    .bss.offsets:00000000 $d
+     /tmp/ccBsJCQg.s:646    .bss.pulse_count:00000000 $d
+
+UNDEFINED SYMBOLS
+HAL_GPIO_ReadPin
+HAL_GPIO_WritePin
+memset
+__aeabi_i2f
+__aeabi_fmul
+__aeabi_f2d
+__aeabi_dmul
+__aeabi_ddiv
+__aeabi_d2f

@@ -1,0 +1,16 @@
+{
+    "files.associations": {
+        "cstdint": "c",
+        "usbd_custom_hid_if.h": "c",
+        "usbd_customhid.h": "c",
+        "usbd_ioreq.h": "c",
+        "usbd_def.h": "c",
+        "usbd_conf.h": "c",
+        "stdio.h": "c",
+        "stdlib.h": "c",
+        "string.h": "c",
+        "main.h": "c"
+    },
+    "cortex-debug.armToolchainPath": "/usr/bin",
+    "cortex-debug.openocdPath": "/home/jack/.config/Code - OSS/User/globalStorage/bmd.stm32-for-vscode/@xpack-dev-tools/openocd/0.12.0-1.1/.content/bin/openocd"
+}
