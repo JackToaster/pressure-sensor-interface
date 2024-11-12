@@ -35,7 +35,7 @@ class DataSeries:
 
     def append_from(self, d2):
         self.data.extend(d2.data)
-        self.time.extend(d2.time)
+        self.time.extend(d2.timestamps)
         d2.clear()
 
     def add_point(self, data_point:DataPoint):

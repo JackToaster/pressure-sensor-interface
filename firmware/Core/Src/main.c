@@ -59,9 +59,29 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+volatile uint32_t crc1, crc2;
 
 struct TxStruct tx_data = {};
+
+
+uint32_t crc32_native(uint32_t *bfr, int len_words, int clear) {
+    uint32_t *bfr2 = bfr;
+    int len_words_2 = len_words;
+    if(clear)
+    {
+        __HAL_CRC_DR_RESET(&hcrc);
+    }
+
+    while(len_words--)
+    {
+        uint32_t buf_val = *bfr++;
+        
+        hcrc.Instance->DR = __REV(buf_val);
+    }
+    hcrc.State = HAL_CRC_STATE_READY;
+
+    return hcrc.Instance->DR;
+}
 
 void build_tx_data(void) {
   for(uint8_t channel = 0; channel < 8; channel++) {
@@ -69,7 +89,7 @@ void build_tx_data(void) {
   }
 
 
-  uint32_t crc = HAL_CRC_Calculate(&hcrc, (uint32_t*) tx_data.pressures, 8);
+  uint32_t crc = crc32_native((uint32_t*) &tx_data, sizeof(struct TxStruct) / 4 - 1, 1);
   tx_data.crc = crc;
 }
 

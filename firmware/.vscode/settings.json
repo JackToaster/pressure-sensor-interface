@@ -1,9 +1,12 @@
 {
     "cortex-debug.armToolchainPath": "/usr/bin",
-    "cortex-debug.openocdPath": "/home/jack/.config/Code - OSS/User/globalStorage/bmd.stm32-for-vscode/@xpack-dev-tools/openocd/0.12.0-1.1/.content/bin/openocd",
+    "cortex-debug.openocdPath": "/usr/bin/openocd",
     "files.associations": {
         "hx711.h": "c",
         "main.h": "c",
-        "usbd_cdc_if.h": "c"
+        "usbd_cdc_if.h": "c",
+        "usb_device.h": "c",
+        "crc.h": "c",
+        "stm32f1xx_hal_crc.h": "c"
     }
 }
