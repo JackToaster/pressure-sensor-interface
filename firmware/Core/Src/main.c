@@ -28,6 +28,7 @@
 #include "usbd_cdc_if.h"
 #include "hx711.h"
 #include "stm32f1xx_hal_crc.h"
+#include "valve.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -96,6 +97,9 @@ void build_tx_data(void) {
 #define TX_BUF_LEN sizeof(tx_data)
 
 
+volatile float tick_rate;
+uint32_t loop_count;
+
 /* USER CODE END 0 */
 
 /**
@@ -104,7 +108,6 @@ void build_tx_data(void) {
   */
 int main(void)
 {
-
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -133,6 +136,10 @@ int main(void)
   MX_USB_DEVICE_Init();
   MX_CRC_Init();
   /* USER CODE BEGIN 2 */
+  valve_init();
+
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+
   hx711_initialize(GAIN_32_PULSES);
   hx711_zero();
 
@@ -142,7 +149,18 @@ int main(void)
   tx_data.magic[3] = 'L';
   
 
-  // CRC init
+  // uint32_t switch_time = 10;
+  // while(switch_time > 5) {
+  //   for(uint8_t j = 0; j < 64; ++j) {
+  //     valve_states[0] = 1;
+  //     HAL_Delay(switch_time);
+  //     valve_states[0] = 0;
+  //     HAL_Delay(switch_time);
+  //   }
+      
+  //   HAL_Delay(500);
+  //   switch_time -= 1;
+  // }
   
   
   /* USER CODE END 2 */
@@ -156,6 +174,33 @@ int main(void)
     build_tx_data();
 
     CDC_Transmit_FS((uint8_t*)&tx_data, TX_BUF_LEN);
+
+
+    float p0 = hx711_get_kpa(0);
+    
+    float hyst_on = 0.2;
+    float hyst_off = 0.2;
+
+    float target = 4.5;
+
+    // fill valve
+    if(p0 < target - hyst_on ) {
+      valve_states[0] = 1; // open
+    } else if (p0 > target - hyst_off) {
+      valve_states[0] = 0; // close
+    }
+
+    // drain valve
+    if(p0 < target + hyst_off) {
+      valve_states[1] = 0; // close
+    } else if (p0 > target + hyst_on) {
+      valve_states[1] = 1; // open
+    }
+
+    loop_count++;
+    tick_rate = (float)(HAL_GetTick()) / (float)loop_count;
+
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
