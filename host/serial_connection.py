@@ -1,15 +1,16 @@
 import sys
 from PyQt5 import QtWidgets, QtCore, QtGui
+
 import serial
 import serial.tools.list_ports
 
-from app_state import AppState
+# from monitor_GUI import Application
 
 
 class SerialConnectionWidget(QtWidgets.QWidget):
-    def __init__(self, state: AppState):
+    def __init__(self, parent):
         super().__init__()
-        self.state = state
+        self.parent = parent
 
         # Initialize layout and components
         self.setLayout(QtWidgets.QVBoxLayout())
@@ -44,7 +45,7 @@ class SerialConnectionWidget(QtWidgets.QWidget):
         control_hbox.addWidget(self.connect_button)
 
         # Initial state
-        self.state.serial_connection = None
+        self.parent.serial_connection = None
         self.refresh_ports()
 
         # Connect signals to actions
@@ -68,12 +69,12 @@ class SerialConnectionWidget(QtWidgets.QWidget):
 
     def toggle_connection(self):
         """ Connect or disconnect to the selected serial device. """
-        if self.state.serial_connection is None:
+        if self.parent.serial_connection is None:
             # Connect
             port_name = self.port_dropdown.currentText()
             if port_name:
                 try:
-                    self.state.serial_connection = serial.Serial(port_name, baudrate=115200, timeout=1)
+                    self.parent.serial_connection = serial.Serial(port_name, baudrate=115200, timeout=1)
                     self.connect_button.setText("Disconnect")
                     print(f"Connected to {port_name}")
 
@@ -85,8 +86,8 @@ class SerialConnectionWidget(QtWidgets.QWidget):
 
         else:
             # Disconnect
-            self.state.serial_connection.close()
-            self.state.serial_connection = None
+            self.parent.serial_connection.close()
+            self.parent.serial_connection = None
             self.connect_button.setText("Connect")
             print("Disconnected")
             self._not_connected()

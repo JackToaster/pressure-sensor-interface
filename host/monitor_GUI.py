@@ -6,32 +6,56 @@ from PyQt5 import QtWidgets, QtCore
 import pyqtgraph as pg
 from PyQt5.QtWidgets import QFileDialog
 from pyqtgraph.parametertree import ParameterTree
+from pyqtgraph.parametertree.parameterTypes import SimpleParameter
 
-from app_state import AppState
 from parameters import create_parameters
+from serial_comms import SerialWorker
 from serial_connection import SerialConnectionWidget
 
 from data_series import DataSeries, DataPoint
 
+N_CHANNELS = 8
+
 
 class Application(QtWidgets.QWidget):
+    # Signal to start the serial listening worker in a separate thread
+    start_serial_sig = QtCore.pyqtSignal()
+
     def __init__(self):
         super().__init__()
 
-        self.state = AppState(n_channels=8)
+        self.graphs = []
+        self.plots = []
+        self.n_channels = N_CHANNELS
+
+        self.graph_panel = pg.GraphicsLayoutWidget()
+
+        self.data = DataSeries(n_channels=N_CHANNELS)
+
+        self.serial_connection = None
+
+        self.serial_worker = None
+        self.serial_worker_thread = QtCore.QThread(self)
+
+        # Timer for updating graphs
+        self.update_graph_timer = QtCore.QTimer()
+        self.update_graph_timer.timeout.connect(self.update_plots)
+        self.update_graph_timer.setSingleShot(True)
+        self.running = False
+        self.new_data_available = False
 
         # Set up the layout
         self.setWindowTitle("Pneumatic Interface GUI")
 
         # Create control panel on the left
         self.control_panel = QtWidgets.QVBoxLayout()
-        self.serial_conn_ctl = SerialConnectionWidget(self.state)
+        self.serial_conn_ctl = SerialConnectionWidget(self)
         self.start_button = QtWidgets.QPushButton("Start")
         self.stop_button = QtWidgets.QPushButton("Stop")
         self.save_button = QtWidgets.QPushButton("Save Data")
 
         self.param_list = ParameterTree()
-        self.params = create_parameters(self.state)
+        self.params = create_parameters(self)
         self.param_list.setParameters(self.params, showTop=False)
 
         # Add buttons to control panel
@@ -52,7 +76,7 @@ class Application(QtWidgets.QWidget):
 
         # Create 8 line graphs in the graph panel TODO Move this to app_state
         for i in range(8):
-            plot = self.state.graph_panel.addPlot(row=i, col=0, axisItems={'bottom': pg.DateAxisItem()})
+            plot = self.graph_panel.addPlot(row=i, col=0, axisItems={'bottom': pg.DateAxisItem()})
             plot.showGrid(x=True, y=True)
             plot.setLabel('left', f"P[{i}]")
             plot.setLabel('bottom', "Time")
@@ -61,11 +85,11 @@ class Application(QtWidgets.QWidget):
             plot.setDownsampling(mode='peak')
             plot.showGrid(x=True, y=True)
             plot_curve = plot.plot(pen=pg.mkPen(color=(i * 30, 100, 200)), fillLevel=-0.3, brush=(50, 50, 200, 100))
-            self.state.graphs.append(plot)
-            self.state.plots.append(plot_curve)
+            self.graphs.append(plot)
+            self.plots.append(plot_curve)
 
         for i in range(1, 8):
-            self.state.graphs[i].setXLink(self.state.graphs[0])
+            self.graphs[i].setXLink(self.graphs[0])
 
         # Add control and graph panels to main layout
         self.layout = QtWidgets.QSplitter()
@@ -74,7 +98,7 @@ class Application(QtWidgets.QWidget):
         left.setLayout(self.control_panel)
         self.layout.addWidget(left)
 
-        self.layout.addWidget(self.state.graph_panel)
+        self.layout.addWidget(self.graph_panel)
 
         self.layout.setStretchFactor(1, 1)
         self.layout.setSizes([125, 150])
@@ -87,19 +111,21 @@ class Application(QtWidgets.QWidget):
         self.stop_button.clicked.connect(self.stop_data)
         self.save_button.clicked.connect(self.save_data)
 
-        # Timer for updating graphs
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.update_data)
-        self.running = False
+    def set_graph_update_time(self, interval_sec: SimpleParameter):
+        # Set timer interval in ms
+        self.update_graph_timer.setInterval(int(interval_sec.value() * 1000))
+        print(f'update rate set to {interval_sec.value()} sec')
 
     def start_data(self):
         self.running = True
-        self.state.data.clear()  # Reset data arrays
-        self.timer.start(10)  # Update every 10ms TODO make this serial based
+        self.data.clear()  # Reset data arrays
+        self.start_serial_worker()
+        self.update_graph_timer.start()
 
     def stop_data(self):
         self.running = False
-        self.timer.stop()
+        self.update_graph_timer.stop()
+        self.stop_serial_worker()
 
     def save_data(self):
         timestamp = time.strftime("%Y%m%d-%H%M%S")
@@ -110,25 +136,43 @@ class Application(QtWidgets.QWidget):
             return
         self.data.save_to_file(filename)
 
-    def update_data(self):
-        if not self.running:
+    @QtCore.pyqtSlot(DataPoint)
+    def new_data_received(self, datum):
+        # print('*', end='')
+        self.data.add_point(datum)
+        # self.update_plots()
+        self.new_data_available = True
+
+    def start_serial_worker(self):
+        self.serial_worker = SerialWorker(self.serial_connection, self.new_data_received)
+        self.serial_worker.moveToThread(self.serial_worker_thread)
+        self.serial_worker_thread.start()
+
+        # Start receiving data
+        self.start_serial_sig.connect(self.serial_worker.start_work)
+        self.start_serial_sig.emit()
+
+    def stop_serial_worker(self):
+        if self.serial_worker is None:
+            print('serial worker isn\'t started yet dummy')
             return
+        self.serial_worker.stop_work()
+        print('stopping serial worker')
 
-        current_time = time.time()
+        if self.serial_worker is not None:
+            self.serial_worker.deleteLater()
+            self.serial_worker = None
 
-        new_datapoint = DataPoint(timestamp=current_time, data=[])
-
-        for i in range(self.state.n_channels):
-            new_value = random.uniform(-10, 10)  # Generate random data point
-            new_datapoint.data.append(new_value)
-
-        self.state.data.add_point(new_datapoint)
-
-        self.update_plots()
+        self.serial_worker_thread.exit()
 
     def update_plots(self):
-        for i in range(8):
-            self.state.plots[i].setData(x=self.state.data.timestamps, y=self.state.data.data[i])
+        if self.new_data_available:
+            for i in range(8):
+                self.plots[i].setData(x=self.data.timestamps, y=self.data.data[i])
+
+        self.new_data_available = False
+        if self.running:
+            self.update_graph_timer.start()
 
 
 if __name__ == "__main__":
