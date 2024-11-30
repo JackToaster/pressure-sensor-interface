@@ -74,7 +74,7 @@ class SerialConnectionWidget(QtWidgets.QWidget):
             port_name = self.port_dropdown.currentText()
             if port_name:
                 try:
-                    self.parent.serial_connection = serial.Serial(port_name, baudrate=115200, timeout=1)
+                    self.parent.serial_connection = serial.Serial(port_name, baudrate=115200, timeout=1, write_timeout=1)
                     self.connect_button.setText("Disconnect")
                     print(f"Connected to {port_name}")
 

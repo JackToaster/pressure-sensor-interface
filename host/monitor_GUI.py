@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QFileDialog
 from pyqtgraph.parametertree import ParameterTree
 from pyqtgraph.parametertree.parameterTypes import SimpleParameter
 
-from parameters import create_parameters
+from parameters import GuiParameters
 from serial_comms import SerialWorker
 from serial_connection import SerialConnectionWidget
 
@@ -36,6 +36,7 @@ class Application(QtWidgets.QWidget):
 
         self.serial_worker = None
         self.serial_worker_thread = QtCore.QThread(self)
+        self.serial_connection = None
 
         # Timer for updating graphs
         self.update_graph_timer = QtCore.QTimer()
@@ -55,7 +56,7 @@ class Application(QtWidgets.QWidget):
         self.save_button = QtWidgets.QPushButton("Save Data")
 
         self.param_list = ParameterTree()
-        self.params = create_parameters(self)
+        self.params = GuiParameters(self)
         self.param_list.setParameters(self.params, showTop=False)
 
         # Add buttons to control panel
@@ -144,7 +145,7 @@ class Application(QtWidgets.QWidget):
         self.new_data_available = True
 
     def start_serial_worker(self):
-        self.serial_worker = SerialWorker(self.serial_connection, self.new_data_received)
+        self.serial_worker = SerialWorker(self.serial_connection, data_rx_slot=self.new_data_received, valve_rx_slot=self.params.set_valve_states)
         self.serial_worker.moveToThread(self.serial_worker_thread)
         self.serial_worker_thread.start()
 
